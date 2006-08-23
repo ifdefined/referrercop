@@ -1,0 +1,64 @@
+#
+# referrercop.conf - ReferrerCop configuration file.
+#
+# $Id: referrercop.conf.sample,v 1.1 2006/02/26 08:44:54 ryan Exp $
+#
+# Syntax:
+#   string:    '...' or "..."
+#   integer:   5 or -5 (no quotes)
+#   regexp:    /.../
+#   hash:      { key => value, ... }
+#   array:     [ value, ... ]
+#   procedure: proc {|arglist| Ruby code }
+#
+# You guessed it; this file is Ruby, so you've gotta use Ruby syntax. But
+# Ruby's a real friendly sort of language, so don't you worry. Just pay
+# attention to the comments and you'll be fine.
+#
+# Credit where credit is due: the format of this file was inspired by that of
+# pkgtools.conf, from the lovely pkgtools suite for FreeBSD (also written in
+# Ruby).
+#
+
+module ReferrerCopConfig
+
+  # BLACKLIST_FILE: string
+  # default: '/usr/local/share/referrercop/blacklist.refcop'
+  #
+  # Blacklist file to use. The file may contain a list of domain names and URLs
+  # (minus the http:// prefix). It may also contain regular expressions, which
+  # must be delimited by front-slashes (i.e., /regex/).
+
+  BLACKLIST_FILE = '/usr/local/share/referrercop/blacklist.refcop'
+
+  # WHITELIST_FILE: string
+  # default: '/usr/local/share/referrercop/whitelist.refcop'
+  #
+  # Whitelist file to use. Optional. Format is the same as the blacklist file.
+
+  WHITELIST_FILE = '/usr/local/share/referrercop/whitelist.refcop'
+
+  # CACHE_PATH: string
+  # default: '/tmp'
+  #
+  # Directory where compiled lists will be cached to speed up processing.
+
+  CACHE_PATH = '/tmp'
+
+  # UPDATE_URL: string
+  # default: 'http://referrercop.org/blacklists/referrer-standard.txt.gz'
+  #
+  # HTTP URL of the remote blacklist to be used for blacklist updates. The
+  # remote blacklist must be compressed using GZip compression.
+
+  UPDATE_URL = 'http://referrercop.org/blacklists/referrer-standard.txt.gz'
+
+  # UPDATE_SHA1_URL: string
+  # default: 'http://referrercop.org/blacklists/referrer-standard.sha1'
+  #
+  # HTTP URL of a file containing the SHA1 checksum of the latest blacklist on
+  # the update server.
+
+  UPDATE_SHA1_URL = 'http://referrercop.org/blacklists/referrer-standard.sha1'
+
+end
