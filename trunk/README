@@ -1,6 +1,49 @@
-Sorry, this is just a decoy. See http://wonko.com/software/referrercop/ for
-all your documentation needs.
+= ReferrerCop
 
-If you're a Ruby developer and you'd like to use ReferrerCop's functionality in
-your own applications, take a look at the API documentation in the /doc
-directory.
+Parses an Apache log file or AWStats data file and filters out entries with
+referrers that are known spammers.
+
+Version::   2.0.0 (?)
+Author::    Ryan Grove (mailto:ryan@wonko.com)
+Copyright:: Copyright (c) 2007 Ryan Grove
+License::   ReferrerCop is open source software distributed under the terms of
+            the New BSD License.
+Website::   http://wonko.com/software/referrercop/
+
+== Dependencies
+
+* Ruby[http://ruby-lang.org/] 1.8.5+
+
+== Usage
+
+      referrercop [-f | -i | -n | -s] [options] [<file> ...]
+      referrercop -u <url> [options]
+      referrercop -U [options]
+      referrercop {-h | -V}
+
+Modes:
+  -f, --filter             Filter the specified files (or standard input if no
+                           files are specified), sending the results to
+                           standard output. This is the default mode.
+  -i, --in-place           Filter the specified files in place, replacing each
+                           file with the filtered version. A backup of the
+                           original file will be created with a .bak extension.
+  -n, --extract-ham        Extract ham (nonspam) URLs from the input data and
+                           send them to standard output. Duplicates will be
+                           suppressed.
+  -s, --extract-spam       Extract spam URLs from the input data and send
+                           them to standard output. Duplicates will be
+                           suppressed.
+  -u, --url <url>          Test the specified URL.
+  -U, --update             Check for an updated version of the default
+                           blacklist and download it if available.
+
+Options:
+  -b, --blacklist <file>   Blacklist to use instead of the default list.
+  -c, --config <file>      Use the specified config file.
+  -v, --verbose            Print verbose status and statistical info to stderr.
+  -w, --whitelist <file>   Whitelist to use instead of the default list.
+
+Information:
+  -h, --help               Display usage information (this message).
+  -V, --version            Display version information.

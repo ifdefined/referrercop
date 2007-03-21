@@ -1,0 +1,298 @@
+#!/usr/bin/env ruby
+#--
+# Copyright (c) 2007 Ryan Grove <ryan@wonko.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#   * Redistributions of source code must retain the above copyright notice,
+#     this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright notice,
+#     this list of conditions and the following disclaimer in the documentation
+#     and/or other materials provided with the distribution.
+#   * Neither the name of this project nor the names of its contributors may be
+#     used to endorse or promote products derived from this software without
+#     specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#++
+
+# stdlib includes
+require 'optparse'
+require 'net/http'
+require 'uri'
+require 'zlib'
+
+# RubyGems includes
+require 'rubygems'
+require 'referrercop'
+
+APP_NAME      = 'ReferrerCop'
+APP_VERSION   = '2.0.0'
+APP_COPYRIGHT = 'Copyright (c) 2007 Ryan Grove <ryan@wonko.com>. All rights reserved.'
+APP_URL       = 'http://referrercop.org/'
+
+module ReferrerCop
+  # Options that can be set from the command line.
+  @options = {
+    :blacklist   => nil,                   # blacklist filename
+    :config_file => nil,                   # config filename
+    :mode        => :filter,               # program operation mode
+    :url         => nil,                   # url passed on the command line
+    :whitelist   => nil                    # whitelist filename
+  }
+  
+  optparse = OptionParser.new do |optparse|
+    optparse.summary_width  = 24
+    optparse.summary_indent = '  '
+  
+    optparse.banner = "Usage: referrercop [-f | -i | -n | -s] [options] [<file> ...]\n" +
+                      "       referrercop -u <url> [options]\n" +
+                      "       referrercop -U [options]\n" +
+                      "       referrercop {-h | -V}"
+  
+    optparse.separator ''
+    optparse.separator 'Modes:'
+  
+    optparse.on('-f', '--filter',
+        'Filter the specified files (or standard input if no',
+        'files are specified), sending the results to',
+        'standard output. This is the default mode.') do
+      @options[:mode] = :filter
+    end
+  
+    optparse.on('-i', '--in-place',
+        'Filter the specified files in place, replacing each',
+        'file with the filtered version. A backup of the',
+        'original file will be created with a .bak extension.') do
+      @options[:mode] = :inplace
+    end
+  
+    optparse.on('-n', '--extract-ham',
+        'Extract ham (nonspam) URLs from the input data and',
+        'send them to standard output. Duplicates will be',
+        'suppressed.') do
+      @options[:mode] = :extract_ham
+    end
+  
+    optparse.on('-s', '--extract-spam',
+        'Extract spam URLs from the input data and send',
+        'them to standard output. Duplicates will be',
+        'suppressed.') do
+      @options[:mode] = :extract_spam
+    end
+  
+    optparse.on('-u', '--url <url>',
+        'Test the specified URL.') do |url|
+      @options[:mode] = :url
+      @options[:url]  = url
+    end
+  
+    optparse.on('-U', '--update',
+        'Check for an updated version of the default',
+        'blacklist and download it if available.') do
+      @options[:mode] = :update
+    end
+  
+    optparse.separator ''
+    optparse.separator 'Options:'
+  
+    optparse.on('-b', '--blacklist <file>',
+        'Blacklist to use instead of the default list.') do |filename|
+      unless File.exist?(filename)
+        raise("Blacklist not found - #{filename}")
+      end
+  
+      @options[:blacklist] = filename
+    end
+  
+    optparse.on('-c', '--config <file>',
+        'Use the specified config file.') do |filename|
+      @options[:config_file] = filename
+    end
+  
+    optparse.on('-v', '--verbose',
+        'Print verbose status and statistical info to stderr.') do
+      $VERBOSE = true
+    end
+  
+    optparse.on('-w', '--whitelist <file>',
+        'Whitelist to use instead of the default list.') do |filename|
+      unless File.exist?(filename)
+        raise("Whitelist not found - #{filename}")
+      end
+  
+      @options[:whitelist] = filename
+    end
+  
+    optparse.separator ''
+    optparse.separator 'Information:'
+  
+    optparse.on_tail('-h', '--help',
+        'Display usage information (this message).') do
+      puts optparse
+      exit
+    end
+  
+    optparse.on_tail('-V', '--version',
+        'Display version information.') do
+      puts "#{APP_NAME} v#{APP_VERSION} <#{APP_URL}>"
+      puts "#{APP_COPYRIGHT}"
+      puts
+      puts "#{APP_NAME} comes with ABSOLUTELY NO WARRANTY."
+      puts
+      puts 'This program is open source software distributed under the terms of the'
+      puts 'New BSD License. For details, see the LICENSE file contained in the source'
+      puts 'distribution.'
+      exit
+    end
+  end
+  
+  begin
+    optparse.parse!(ARGV)
+  rescue => e
+    abort("Error: #{e}")
+  end
+  
+  # Display header if in verbose mode.
+  if $VERBOSE
+    $stderr.puts "#{APP_NAME} v#{APP_VERSION} <#{APP_URL}>"
+    $stderr.puts "#{APP_COPYRIGHT}"
+    $stderr.puts
+  end
+  
+  # Load config file.
+  if @options[:config_file].nil?
+    CONFIG_PATHS.each do |path|
+      filename = File.join(path, 'referrercop.conf')
+  
+      if File.exist?(filename)
+        @options[:config_file] = filename
+        break
+      end
+    end
+  end
+  
+  Config::load_config(@options[:config_file])
+  
+  # Load lists.
+  @options[:blacklist] ||= Config::BLACKLIST_FILE
+  @options[:whitelist] ||= Config::WHITELIST_FILE
+  
+  load_blacklist(@options[:blacklist])
+  load_whitelist(@options[:whitelist]) unless @options[:whitelist].nil?
+  
+  # Determine the mode and perform the appropriate actions.
+  case @options[:mode]
+    when :filter
+      if ARGV.length
+        while filename = ARGV.shift
+          $stderr.puts "Filtering #{filename}" if $VERBOSE
+          File.open(filename, 'r') {|input| filter(input, $stdout) }
+        end
+      else
+        $stderr.puts "Filtering stdin" if $VERBOSE
+        filter($stdin, $stdout)
+      end
+  
+    when :inplace
+      abort('Error: No files specified.') unless ARGV.length
+  
+      while filename = ARGV.shift
+        $stderr.puts "Filtering #{filename} in place" if $VERBOSE
+  
+        FileUtils.move(filename, filename + '.bak', :force => true)
+  
+        File.open(filename + '.bak', 'r') do |input|
+          File.open(filename, 'w') {|output| filter(input, output) }
+        end
+      end
+  
+    when :extract_ham, :extract_spam
+      type      = @options[:mode] == :extract_ham ? :ham : :spam
+      extracted = []
+  
+      if ARGV.length
+        while filename = ARGV.shift
+          $stderr.puts "Extracting #{type} URLs from #{filename}" if $VERBOSE
+  
+          File.open(filename, 'r') do |input|
+            each(input, type) {|url| extracted << url }
+          end
+        end
+      else
+        $stderr.puts "Extracting #{type} URLs from stdin" if $VERBOSE
+        each($stdin, type) {|url| extracted << url }
+      end
+  
+      $stdout.puts extracted.uniq.sort
+      exit
+  
+    when :url
+      puts spam?(@options[:url]) ? 'Spam' : 'Ham'
+      exit
+  
+    when :update
+      $stderr.puts "Checking for updated blacklist..." if $VERBOSE
+  
+      begin
+        # Get the SHA1 checksum of the latest remote blacklist.
+        remote_hash = Net::HTTP.get(URI.parse(Config::UPDATE_SHA1_URL))
+  
+        # Compare the remote hash to the local hash.
+        if remote_hash.strip == @blacklist.sha1
+          $stderr.puts "No update necessary." if $VERBOSE
+          exit
+        end
+  
+      rescue => e
+        abort 'Error: Unable to connect to update server.'
+      end
+  
+      # Download the updated blacklist.
+      $stderr.puts "Downloading new blacklist to #{@options[:blacklist]}" if $VERBOSE
+  
+      begin
+        # Download the file.
+        File.open(@options[:blacklist] + '.gz', 'w') do |file|
+          file.write(Net::HTTP.get(URI.parse(Config::UPDATE_URL)))
+        end
+  
+        # Unzip the file.
+        File.open(@options[:blacklist], 'w') do |file|
+          Zlib::GzipReader.open(@options[:blacklist] + '.gz') do |gz|
+            while data = gz.read(8192) do
+              file.write(data)
+            end
+          end
+        end
+  
+        # Delete the .gz file.
+        File.delete(@options[:blacklist] + '.gz')
+  
+      rescue => e
+        abort "Error: #{e}"
+      end
+  
+      exit
+  end
+  
+  # Display statistics if in verbose mode.
+  if $VERBOSE && !@stats.empty? && @stats[:processed] > 0
+    $stderr.puts
+    $stderr.puts "Processed #{@stats[:processed]} lines in #{@stats[:time]}s " +
+      "(#{@stats[:lines_per_second]} lines per second)"
+    $stderr.puts "#{@stats[:ham]} ham, #{@stats[:spam]} spam, #{@stats[:invalid]} invalid"
+  end
+
+end
