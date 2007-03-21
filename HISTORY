@@ -1,10 +1,10 @@
 ReferrerCop Changelog
 ---------------------
 
-Version 1.2.0 (?):
-  * Blacklist and whitelist entries now match if they occur anywhere in the
-    URL, rather than only matching at the beginning. This slows things down a
-    bit, but makes ReferrerCop more effective.
+Version 2.0.0 (?):
+  * Relicensed under the New BSD License.
+  * Significant behind-the-scenes architectural changes resulting in some big
+    performance improvements.
 
 Version 1.1.0 (02/26/2006):
   * The format of blacklists and whitelists has changed; regular expressions
