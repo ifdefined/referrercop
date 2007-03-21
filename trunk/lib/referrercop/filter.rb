@@ -38,7 +38,7 @@ module ReferrerCop
     # Public Class Methods
     #++
     
-    # Returns +true+ if the given IO stream is filterable by this Filter,
+    # Returns +true+ if the given IO stream is filterable by this filter,
     # +false+ otherwise.
     def self.filterable?(io)
       unless io.is_a?(IO)
@@ -68,8 +68,8 @@ module ReferrerCop
       clear_stats
     end
     
-    # Passes each URL in the input stream to the block.
-    def each
+    # Yields each URL in the input stream to the block.
+    def each # :yields: url
       @input.rewind
       
       @input.each do |line|
@@ -82,7 +82,7 @@ module ReferrerCop
     # Executes the block for each URL in the input stream. If the block
     # evaluates to +true+, the URL is considered spam and will be removed from
     # the output stream.
-    def filter(output)
+    def filter(output) # :yields: url
       unless output.is_a?(IO)
         raise ArgumentError, "invalid output: expected IO, got #{output.class}"
       end
