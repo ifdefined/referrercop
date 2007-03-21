@@ -37,6 +37,7 @@ require 'referrercop/error'
 require 'referrercop/config'
 require 'referrercop/filter'
 require 'referrercop/filter/apache-combined'
+require 'referrercop/filter/awstats'
 require 'referrercop/list'
 
 module ReferrerCop
@@ -59,19 +60,9 @@ module ReferrerCop
   
   FILTER_CLASSES = [
     ApacheCombinedFilter,
+    AWStatsFilter,
     Filter,
   ]
-
-  #REGEXPS = {
-  #  :apache_combined          => /^\S+ - \S+ \[.+\] "[A-Z]+ \S+(?: \S+")? \d+ [\d-]+ "(.*)" ".*"$/i,
-  #  :awstats_header           => /^AWSTATS DATA FILE /,
-  #  :awstats_map              => /^BEGIN_MAP.*^END_MAP$/m,
-  #  :awstats_pagerefs_extract => /^BEGIN_PAGEREFS.*?$.*?^(.*?)^END_PAGEREFS$/m,
-  #  :awstats_pagerefs_replace => /^BEGIN_PAGEREFS.*?^END_PAGEREFS$/m,
-  #  :awstats_url              => /^(https?:\/\/\S+)/i,
-  #  :text_url                 => /^(https?:\/\/\S+)/i,
-  #  :address                  => /^(?:https?:\/\/)?(?:www\d*\.)?(\S+?)\/?$/i,
-  #}
 
   #--
   # Variables
@@ -86,7 +77,9 @@ module ReferrerCop
   # Public Class Methods
   #++
   
-  def self.each(input, type)
+  # Scans the IO stream _input_ and yields URLs of the specified _type_ (either
+  # +:ham+ or +:spam+) to the given block.
+  def self.each(input, type) # :yields: url
     filter = get_filter(input)
     
     if type == :ham
@@ -98,23 +91,26 @@ module ReferrerCop
     end
   end
   
-  def self.each_ham(input)
+  # Scans the IO stream _input_ and yields ham URLs to the given block.
+  def self.each_ham(input) # :yields: url
     each(input, :ham) {|url| yield url }
   end
   
-  def self.each_spam(input)
+  # Scans the IO stream _input_ and yields spam URLs to the given block.
+  def self.each_spam(input) # :yields: url
     each(input, :spam) {|url| yield url }
   end
   
-  # Filter _input_, writing only ham to _output_.
+  # Filters the IO stream _input_, writing only ham to _output_.
   def self.filter(input, output)
     filter = get_filter(input)
     filter.filter(output) {|url| spam?(url) }
-    
     @stats = filter.stats.dup
   end
   
-  # Returns an instance of the appropriate filter class for the given stream.
+  # Returns an instance of the appropriate filter class for the given stream. If
+  # there are no filter classes capable of filtering the stream, a NoFilterError
+  # error will be raised.
   def self.get_filter(input)
     # Determine which filter to use.
     filter_class = FILTER_CLASSES.detect {|filter| filter.filterable?(input) }    
@@ -125,10 +121,12 @@ module ReferrerCop
     return filter_class.new(input)
   end
   
+  # Loads a blacklist from the specified file.
   def self.load_blacklist(filename)
     @blacklist = File.exist?(filename) ? List.load_file(filename) : nil
   end
   
+  # Loads a whitelist from the specified file.
   def self.load_whitelist(filename)
     @whitelist = File.exist?(filename) ? List.load_file(filename) : nil
   end

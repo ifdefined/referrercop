@@ -38,11 +38,14 @@ module ReferrerCop
     REGEXP_COMMENT = /#.*$/
     REGEXP_REGEXP  = /^\/(.+)\/$/
     REGEXP_URL     = URI.regexp(['http', 'https'])
+    REGEXP_WWW     = /^www\./i
     
     #--
     # Public Class Methods
     #++
     
+    # Returns a new List instance representing the list contained in the
+    # specified file.
     def self.load_file(filename)
       return File.open(filename, 'r') {|file| List.new(file) }
     end
@@ -53,6 +56,9 @@ module ReferrerCop
     
     attr_reader :sha1, :size
     
+    # Parses and compiles the given IO stream as a list (such as a blacklist or
+    # whitelist) and returns an instance of the List class representing the
+    # parsed list.
     def initialize(io)
       unless io.is_a?(IO)
         raise ArgumentError, "expected IO, got #{io.class}"
@@ -139,15 +145,21 @@ module ReferrerCop
       end
     end
     
+    # Returns +true+ if _key_ is in the list, +false+ otherwise.
     def [](key)
       begin
-        url = URI.parse(key)
-        url = url.host + url.path.chomp('/')
+        uri  = URI.parse(key)
+        host = uri.host
+        url  = uri.host + uri.path.chomp('/')
+        
+        host.slice!(REGEXP_WWW)
       rescue => e
-        url = key.strip.chomp('/')
+        host = nil
+        url  = key.strip.chomp('/')
       end
       
-      return true if @entries.include?(url) || 
+      return (!host.nil? && @entries.include?(host)) || 
+          @entries.include?(url) || 
           @regexps.any?{|regexp| url =~ regexp }
     end
     

@@ -10,7 +10,7 @@ spec = Gem::Specification.new do |s|
   s.version  = '2.0.0'
   s.author   = 'Ryan Grove'
   s.email    = 'ryan@wonko.com'
-  s.homepage = 'http://wonko.com/software/referrercop'
+  s.homepage = 'http://wonko.com/software/referrercop/'
   s.platform = Gem::Platform::RUBY
   s.summary  = "Parses an Apache log file or AWStats data file and filters " +
                "out referrer spam."

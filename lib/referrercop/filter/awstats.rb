@@ -28,11 +28,15 @@
 
 module ReferrerCop
   
-  # The ApacheCombinedFilter class provides filtering capabilities for log files
-  # in the Apache Combined Log Format.
-  class ApacheCombinedFilter < Filter
+  # The AWStatsFilter class provides filtering capabilities for AWStats
+  # intermediate data files (text format only).
+  class AWStatsFilter < Filter
     
-    REGEXP_ENTRY = /^\S+ - \S+ \[.+\] "[A-Z]+ \S+(?: \S+")? \d+ [\d-]+ "(.*)" ".*"$/i
+    REGEXP_HEADER           = /^AWSTATS DATA FILE 6\./
+    REGEXP_MAP              = /^BEGIN_MAP.*^END_MAP$/m
+    REGEXP_PAGEREFS_EXTRACT = /^BEGIN_PAGEREFS.*?$.*?^(.*?)^END_PAGEREFS$/m
+    REGEXP_PAGEREFS_REPLACE = /^BEGIN_PAGEREFS.*?^END_PAGEREFS$/m
+    REGEXP_URL              = /^(https?:\/\/\S+)/i
     
     #--
     # Public Class Methods
@@ -47,7 +51,7 @@ module ReferrerCop
       line = io.gets
       io.rewind
       
-      return line =~ REGEXP_ENTRY
+      return line =~ REGEXP_HEADER
     end
     
     #--
@@ -57,8 +61,10 @@ module ReferrerCop
     def each
       @input.rewind
       
-      @input.each do |line|
-        if line =~ REGEXP_ENTRY
+      referrers = @input.read.slice(REGEXP_PAGEREFS_EXTRACT, 1).strip
+      
+      referrers.each_line do |line|
+        if line =~ REGEXP_URL
           yield $1
         end
       end
@@ -74,12 +80,22 @@ module ReferrerCop
       
       start_time = Time.now.to_f
       
-      @input.each do |line|
+      data = @input.read
+      
+      # Remove the section map (AWStats will regenerate it during the next
+      # update).
+      data.slice!(REGEXP_MAP)
+      
+      # Extract referrers.
+      referrers = data.slice!(REGEXP_PAGEREFS_EXTRACT, 1).strip
+      filtered  = []
+      
+      referrers.each_line do |line|
         @stats[:processed] += 1
         
-        unless line =~ REGEXP_ENTRY
+        unless line =~ REGEXP_URL
           @stats[:invalid] += 1
-          output.puts(line)
+          filtered << line
           next
         end
         
@@ -87,9 +103,18 @@ module ReferrerCop
           @stats[:spam] += 1
         else
           @stats[:ham] += 1
-          output.puts(line)
+          filtered << line
         end
       end
+      
+      # We have to be careful about newlines or AWStats will throw fits.
+      referrers = filtered.length > 0 ? filtered.join('').strip + "\n" : ''
+      
+      # Write output.
+      output.puts data.gsub(REGEXP_PAGEREFS_REPLACE, 
+          "BEGIN_PAGEREFS #{filtered.length}\n" +
+          "#{referrers}" +
+          "END_PAGEREFS")
       
       end_time = Time.now.to_f
       
