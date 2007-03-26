@@ -38,7 +38,7 @@ require 'rubygems'
 require 'referrercop'
 
 APP_NAME      = 'ReferrerCop'
-APP_VERSION   = '2.0.0'
+APP_VERSION   = '1.2.0'
 APP_COPYRIGHT = 'Copyright (c) 2007 Ryan Grove <ryan@wonko.com>. All rights reserved.'
 APP_URL       = 'http://referrercop.org/'
 
