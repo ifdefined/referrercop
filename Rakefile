@@ -7,7 +7,7 @@ require 'rake/rdoctask'
 
 spec = Gem::Specification.new do |s|
   s.name     = 'referrercop'
-  s.version  = '2.0.0'
+  s.version  = '1.2.0'
   s.author   = 'Ryan Grove'
   s.email    = 'ryan@wonko.com'
   s.homepage = 'http://wonko.com/software/referrercop/'

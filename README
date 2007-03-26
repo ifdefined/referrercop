@@ -3,7 +3,7 @@
 Parses an Apache log file or AWStats data file and filters out entries with
 referrers that are known spammers.
 
-Version::   2.0.0 (?)
+Version::   1.2.0 (?)
 Author::    Ryan Grove (mailto:ryan@wonko.com)
 Copyright:: Copyright (c) 2007 Ryan Grove
 License::   ReferrerCop is open source software distributed under the terms of
