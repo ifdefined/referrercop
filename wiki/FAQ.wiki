@@ -31,8 +31,7 @@ example.com/foo/bar.html
 
 I (the author) manually update and verify the list based on referrer spam received by various sites I administer, as well as those hosted by [http://jetpants.com/ Jetpants]. 
 
-= I have a shared hosting package with a web-based control panel. Can I install !ReferrerCop on my account? =
+= I have a shared hosting package with a web-based control panel. Can I install ReferrerCop on my account? =
 
 Probably not, but it depends on the host. At this time, the only shared host we know of that provides !ReferrerCop filtering is [http://jetpants.com/ Jetpants]. You might want to try asking your administrator if they'll install !ReferrerCop for you.
-
 
